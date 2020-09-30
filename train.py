@@ -146,7 +146,8 @@ if __name__ == "__main__":
             'val_loss': v_losses,
             'dim': DIM,
             'lr': LR,
-            'batch_size': BATCH_SIZE
+            'batch_size': BATCH_SIZE,
+            'centers': centers
         }
 
         early_stopping(val_loss, model, ep, state)
