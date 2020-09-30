@@ -1,0 +1,8 @@
+cifar-10-batches-py 
+cifar-10-python.tar.gz
+MNIST  
+models/ep_*   
+__pycache__ 
+training.ipynb
+.*.py 
+.ipynb_checkpoints/ 
