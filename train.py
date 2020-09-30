@@ -113,7 +113,7 @@ if __name__ == "__main__":
 
         for i in range(LAYER):
             previous_layers.append(network.network()[i])
-            previous_layers[-1].load_state_dict(torch.load(glob('models/' + PATH.replace('layer_{}'.format(LAYER), 'layer_{}'.format(LAYER-1)) + '/*')[0])['state_dict'])
+            previous_layers[-1].load_state_dict(torch.load(glob('models/' + PATH.replace('layer_{}'.format(LAYER), 'layer_{}'.format(i)) + '/*')[0])['state_dict'])
 
         previous_model = nn.Sequential(*previous_layers)
     
