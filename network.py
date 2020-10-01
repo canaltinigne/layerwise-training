@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 class DenseLayer(nn.Module):
 
     def __init__(self, in_, out_, k_size, pad, activation):
@@ -21,6 +22,21 @@ class DenseLayer(nn.Module):
         elif self.activation == 'tanh':
             return torch.tanh(self.max_pool(self.conv(x)))
 
+        
+class SoftmaxLayer(nn.Module):
+
+    def __init__(self, class_num):
+        super(SoftmaxLayer, self).__init__()
+        
+        self.layer = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(4*4*32, class_num)
+        )
+
+    def forward(self, x):
+        
+        return self.layer(x)
+
 
 class FeedForwardNet():
 
@@ -28,7 +44,8 @@ class FeedForwardNet():
         self.dims = [
             16*16*3,
             8*8*16,
-            4*4*32
+            4*4*32,
+            1
         ]
 
         self.activation = activation
@@ -41,5 +58,27 @@ class FeedForwardNet():
             DenseLayer(in_=1 if self.dataset == 'mnist' else 3, out_=3, k_size=3, pad=1, activation=self.activation).cuda(),
             DenseLayer(in_=3, out_=16, k_size=3, pad=1, activation=self.activation).cuda(),
             DenseLayer(in_=16, out_=32, k_size=3, pad=1, activation=self.activation).cuda(),
-            nn.Linear(4*4*32, len(self.class_num))
+            SoftmaxLayer(self.class_num).cuda()
         ]
+
+
+class ResNet():
+    
+    def __init__(self):
+        pass
+    
+    def network(self):
+        # Return separated layers in an array
+        pass
+    
+    
+class DenseNet():
+    
+    def __init__(self):
+        pass
+    
+    def network(self):
+        # Return separated layers in an array
+        pass
+    
+    

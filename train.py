@@ -29,18 +29,19 @@ if __name__ == "__main__":
     parser.add_argument('-d', '--dataset', type=str, required=True, help='Choose dataset')
     parser.add_argument('-la', '--layer', type=int, required=True, help='Choose which layer to train.')
     parser.add_argument('-p', '--patience', type=int, required=True, help='Patience for early stopping (epochs)')
+    parser.add_argument('-u', '--use_previous_centers', type=int, required=True, help='Use learned centers for init.')
     
     args = parser.parse_args()
 
     assert args.dataset in ['mnist', 'cifar10']
     assert args.network in ['ff', 'resnet', 'densenet']
-    assert args.loss in ['trl', 'tcl', 'ce']
+    assert args.loss in ['trl', 'tcl']
 
     BATCH_SIZE = args.batch
     EPOCH = args.epoch
     LAYER = args.layer
     LR = args.rate
-    PATH = 'ep_{}_lr_{}_b_{}_l_{}_n_{}_d_{}_layer_{}/'.format(EPOCH, LR, BATCH_SIZE, args.loss, args.network, args.dataset, args.layer)
+    PATH = 'ep_{}_lr_{}_b_{}_l_{}_n_{}_d_{}_layer_{}_pcent_{}/'.format(EPOCH, LR, BATCH_SIZE, args.loss, args.network, args.dataset, args.layer, args.use_previous_centers)
     
     os.makedirs('models/' + PATH)
     
@@ -72,7 +73,7 @@ if __name__ == "__main__":
     ACTIVATION = 'sigmoid' if args.loss == 'trl' else 'tanh'
 
     if args.network == 'ff':
-        network = FeedForwardNet(train_set, ACTIVATION, args.dataset)
+        network = FeedForwardNet(CLASS_NUM, ACTIVATION, args.dataset)
         model = network.network()[LAYER]
         DIM = network.dims[LAYER]
  
@@ -81,8 +82,18 @@ if __name__ == "__main__":
 
     elif args.network == 'densenet':
         pass
-
     
+    
+    net_length = len(network.network())
+    
+    assert LAYER < net_length, "ERROR: Choose a layer number smaller than {} to train".format(net_length)
+    
+    current_loss = args.loss
+    
+    if LAYER == net_length-1:
+        args.loss = 'ce'
+        
+        
     if args.loss == 'trl':
         centers = torch.from_numpy(np.eye(DIM)).type(torch.cuda.FloatTensor)
         loss_fn = expLoss
@@ -93,6 +104,7 @@ if __name__ == "__main__":
 
     elif args.loss == 'ce':
         loss_fn = nn.CrossEntropyLoss()
+        centers = torch.from_numpy(np.eye(DIM)).type(torch.cuda.FloatTensor) # Dummy useless
 
     trainLoader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
     valLoader = DataLoader(val_set, batch_size=16, shuffle=False, num_workers=0)
@@ -113,9 +125,26 @@ if __name__ == "__main__":
 
         for i in range(LAYER):
             previous_layers.append(network.network()[i])
-            previous_layers[-1].load_state_dict(torch.load(glob('models/' + PATH.replace('layer_{}'.format(LAYER), 'layer_{}'.format(i)) + '/*')[0])['state_dict'])
+            
+            if i == 0:
+                load_path = glob('models/*l_{}_n_{}_d_{}_layer_{}_pcent_*/*'.format(current_loss,
+                                                                                args.network,
+                                                                                args.dataset, i))[0]
+            
+            else:
+                load_path = glob('models/*l_{}_n_{}_d_{}_layer_{}_pcent_{}/*'.format(current_loss,
+                                                                                args.network,
+                                                                                args.dataset, i,
+                                                                                args.use_previous_centers))[0] 
+            
+            print("LOAD: " + load_path)
+            load_dict = torch.load(load_path)
+            previous_layers[-1].load_state_dict(load_dict['state_dict'])
 
         previous_model = nn.Sequential(*previous_layers)
+        
+        if args.use_previous_centers:
+            centers = load_dict['centers']
     
 
     cfg = {
@@ -123,7 +152,8 @@ if __name__ == "__main__":
         'epoch': EPOCH,
         'class_num': CLASS_NUM,
         'layer': LAYER,
-        'previousModel': previous_model
+        'previousModel': previous_model,
+        'loss': args.loss
     }
 
     loader = {
