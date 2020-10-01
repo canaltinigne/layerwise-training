@@ -85,7 +85,7 @@ def eval(model, loader, optimizer, loss_fn, cfg, centers, center_distances, ep):
                 if cfg['loss'] == 'ce':
                     loss = loss_fn(out, target.cuda())
                 else:
-                    loss = loss_fn(out, target, cfg['m'], centers, cfg['class_num'], c_classes, center_distances)
+                    loss = loss_fn(out, target, cfg['m'], centers, cfg['class_num'], None, center_distances)
 
                 v_loss += loss.item()
 

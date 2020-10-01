@@ -29,19 +29,19 @@ if __name__ == "__main__":
     parser.add_argument('-d', '--dataset', type=str, required=True, help='Choose dataset')
     parser.add_argument('-la', '--layer', type=int, required=True, help='Choose which layer to train.')
     parser.add_argument('-p', '--patience', type=int, required=True, help='Patience for early stopping (epochs)')
-    parser.add_argument('-u', '--use_previous_centers', type=int, required=True, help='Use learned centers for init.')
+    parser.add_argument('-f', '--full', type=int, required=True, help='Use learned centers for init.')
     
     args = parser.parse_args()
 
     assert args.dataset in ['mnist', 'cifar10']
     assert args.network in ['ff', 'resnet', 'densenet']
-    assert args.loss in ['trl', 'tcl']
+    assert args.loss in ['trl', 'tcl', 'ce']
 
     BATCH_SIZE = args.batch
     EPOCH = args.epoch
     LAYER = args.layer
     LR = args.rate
-    PATH = 'ep_{}_lr_{}_b_{}_l_{}_n_{}_d_{}_layer_{}_pcent_{}/'.format(EPOCH, LR, BATCH_SIZE, args.loss, args.network, args.dataset, args.layer, args.use_previous_centers)
+    PATH = 'ep_{}_lr_{}_b_{}_l_{}_n_{}_d_{}_layer_{}_full_{}/'.format(EPOCH, LR, BATCH_SIZE, args.loss, args.network, args.dataset, args.layer, args.full)
     
     os.makedirs('models/' + PATH)
     
@@ -73,8 +73,14 @@ if __name__ == "__main__":
     ACTIVATION = 'sigmoid' if args.loss == 'trl' else 'tanh'
 
     if args.network == 'ff':
+        
         network = FeedForwardNet(CLASS_NUM, ACTIVATION, args.dataset)
-        model = network.network()[LAYER]
+        
+        if args.full:
+            model = nn.Sequential(*(network.network()))
+        else:
+            model = network.network()[LAYER]
+           
         DIM = network.dims[LAYER]
  
     elif args.network == 'resnet':
@@ -92,6 +98,9 @@ if __name__ == "__main__":
     
     if LAYER == net_length-1:
         args.loss = 'ce'
+        
+    if args.full:
+        LAYER = 0
         
         
     if args.loss == 'trl':
@@ -126,16 +135,10 @@ if __name__ == "__main__":
         for i in range(LAYER):
             previous_layers.append(network.network()[i])
             
-            if i == 0:
-                load_path = glob('models/*l_{}_n_{}_d_{}_layer_{}_pcent_*/*'.format(current_loss,
-                                                                                args.network,
-                                                                                args.dataset, i))[0]
-            
-            else:
-                load_path = glob('models/*l_{}_n_{}_d_{}_layer_{}_pcent_{}/*'.format(current_loss,
+            load_path = glob('models/*l_{}_n_{}_d_{}_layer_{}_full_{}/*'.format(current_loss,
                                                                                 args.network,
                                                                                 args.dataset, i,
-                                                                                args.use_previous_centers))[0] 
+                                                                                args.full))[0] 
             
             print("LOAD: " + load_path)
             load_dict = torch.load(load_path)
@@ -143,8 +146,6 @@ if __name__ == "__main__":
 
         previous_model = nn.Sequential(*previous_layers)
         
-        if args.use_previous_centers:
-            centers = load_dict['centers']
     
 
     cfg = {
