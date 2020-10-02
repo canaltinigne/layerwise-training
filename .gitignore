@@ -4,5 +4,6 @@ MNIST
 models/ep_*   
 __pycache__ 
 training.ipynb
+Untitled.ipynb
 .*.py 
 .ipynb_checkpoints/ 

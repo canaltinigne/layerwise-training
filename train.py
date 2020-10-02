@@ -95,14 +95,36 @@ if __name__ == "__main__":
     assert LAYER < net_length, "ERROR: Choose a layer number smaller than {} to train".format(net_length)
     
     current_loss = args.loss
+    last_layer_train = False
     
     if LAYER == net_length-1:
         args.loss = 'ce'
-        
+    
+
     if args.full:
+        
+        if LAYER == net_length-1:
+            layers = []
+            last_layer_train = True
+
+            for i in range(LAYER):
+                layers.append(network.network()[i])
+
+                load_path = glob('models/*l_{}_n_{}_d_{}_layer_{}_full_0/*'.format(current_loss, args.network,
+                                                                                   args.dataset, i))[0] 
+
+                print("LOAD: " + load_path)
+                load_dict = torch.load(load_path)
+                layers[-1].load_state_dict(load_dict['state_dict'])
+            
+            layers.append(network.network()[-1])
+            
+            del model
+            model = nn.Sequential(*layers)    
+        
         LAYER = 0
         
-        
+   
     if args.loss == 'trl':
         centers = torch.from_numpy(np.eye(DIM)).type(torch.cuda.FloatTensor)
         loss_fn = expLoss
@@ -128,7 +150,7 @@ if __name__ == "__main__":
     previous_model = None
     
     
-    if LAYER > 0:
+    if LAYER > 0 and not last_layer_train:
         
         previous_layers = []
 
